@@ -1,0 +1,150 @@
+Program.Sub.ScreenSU.Start
+Gui.Form..Create
+Gui.Form..Caption("Selection")
+Gui.Form..Size(11970,2085)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..BackColor(-2147483633)
+Gui.Form..MousePointer(0)
+Gui.Form..Event(UnLoad,Form_UnLoad)
+Gui.Form.lbl1.Create(Label,"Max Row",False,885,255,0,240,600,True,0,"Arial",8,-2147483633,0)
+Gui.Form.txtMaxRow.Create(TextBox,"3836",False,1215,300,0,1170,525,True,1,"Arial",8,-2147483643,1)
+Gui.Form.txtMaxRow.NumericOnly(2)
+Gui.Form.progressBar1.Create(ProgressBar)
+Gui.Form.progressBar1.Size(10575,210)
+Gui.Form.progressBar1.Position(1170,1320)
+Gui.Form.cmdLoad.Create(Button)
+Gui.Form.cmdLoad.Size(855,375)
+Gui.Form.cmdLoad.Position(1170,720)
+Gui.Form.cmdLoad.Caption("Load")
+Gui.Form.cmdLoad.Event(Click,cmdLoad_Click)
+Gui.Form.lbl2.Create(Label,"File",True,555,255,0,240,270,True,0,"Arial",8,-2147483633,0)
+Gui.Form.txtFile.Create(TextBox,"",True,9585,300,0,1170,180,True,0,"Arial",8,-2147483643,1)
+Gui.Form.txtFile.NumericOnly(2)
+Gui.Form.cmdBrowse.Create(Button)
+Gui.Form.cmdBrowse.Size(855,375)
+Gui.Form.cmdBrowse.Position(10875,135)
+Gui.Form.cmdBrowse.Caption("Browse")
+Gui.Form.cmdBrowse.Event(Click,cmdBrowse_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'BN Aug 22, 2019
+'This program is created within a VT session for Thompson Surgical
+'Specs: Update INV_EXTRA_TEXT.Text from csv file with columns Part,Rev,Extra Description
+
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	
+	f.ODBC.Connection!conx.OpenCompanyConnection(500)
+	gui.Form..Show
+
+F.Intrinsic.Control.Catch
+    F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+    F.Intrinsic.UI.Msgbox(V.Local.sError)
+    F.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+
+	F.Intrinsic.Control.If(V.ODBC.conx.State,=,1)
+		F.ODBC.Connection!conx.close
+	F.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	Function.Intrinsic.String.Build("Subroutine Error {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End	
+F.Intrinsic.Control.End
+Program.Sub.Unload.End
+
+Program.Sub.cmdLoad_Click.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sFile.Declare
+	v.Local.bEx.Declare
+	v.Local.sContent.Declare
+	v.Local.iCnt.Declare
+	v.Local.sSQL.Declare
+	v.Local.sDesc.Declare
+	v.Local.sFalseTrue.Declare
+	v.Local.bUpdate.Declare
+	v.Local.sHold.Declare
+	v.Local.sProcessFile.Declare
+	v.Local.sPart.Declare
+	v.Local.sExtraDesc.Declare
+	v.Local.imax.Declare
+	V.Local.sRev.Declare
+	
+	'Check file existing
+	v.Local.sFile.Set(v.Screen.Form!txtFile.text.trim)
+	f.Intrinsic.File.Exists(v.Local.sFile,v.Local.bEx)
+	f.Intrinsic.Control.If(v.Local.bEx.Not)
+		f.Intrinsic.UI.Msgbox("File does not exist")
+		f.Intrinsic.Control.ExitSub
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.File.File2String(v.Local.sFile,v.Local.sContent)
+	
+	f.Intrinsic.String.Split(v.Local.sContent,v.Ambient.NewLine,v.Local.sContent)
+	f.Intrinsic.Math.Add(v.Local.sContent.UBound,1,v.Local.imax)
+	gui.Form.progressBar1.Max(v.Local.imax)
+	f.Intrinsic.Control.For(v.Local.iCnt,2,v.Local.sContent.UBound,1)
+		gui.Form.progressBar1.Value(v.Local.iCnt)
+		f.Intrinsic.String.Split(v.Local.sContent(v.Local.iCnt),",",v.Local.sHold)
+		v.Local.sPart.Set(v.Local.sHold(0).Trim)
+		v.Local.sRev.Set(v.Local.sHold(1).Trim)
+		f.Intrinsic.String.GSSPartString(v.Local.sPart,v.Local.sRev,v.Local.sPart)
+		v.Local.sExtraDesc.Set(v.Local.sHold(2))
+		'f.Intrinsic.String.Replace(v.Local.sExtraDesc,"'"," ",v.Local.sExtraDesc)
+		'v.Local.sFalseTrue.Set(v.Local.sHold(7).Trim)
+		'f.Intrinsic.Control.If(v.Local.sFalseTrue.UCase,=,"FALSE")		
+			f.Intrinsic.String.Build("Update INV_EXTRA_TEXT set Text = '{0}' where Part = '{1}'",v.Local.sExtraDesc.PSQLFriendly,v.Local.sPart.PSQLFriendly,v.Local.sSQL)
+			f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+		'f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Next(v.Local.iCnt)
+	
+	f.Intrinsic.Control.CallSub("Unload")
+	
+
+F.Intrinsic.Control.Catch
+    F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+    F.Intrinsic.UI.Msgbox(V.Local.sError)
+       F.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdLoad_Click.End
+
+Program.Sub.cmdBrowse_Click.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sFilePath.Declare
+	v.Local.sDir.Declare
+	
+	'Default folder
+	f.Intrinsic.String.Build("{0}\Custom\5631\{1}",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDir)
+	F.Intrinsic.UI.ShowOpenFileDialog(V.Local.sDir,"*|*.*","",V.Local.sFilePath)
+	F.Intrinsic.Control.If(V.Local.sFilePath,=,"***CANCEL***")
+		F.Intrinsic.UI.Msgbox("No File Was Selected")
+		F.Intrinsic.Control.ExitSub
+	F.Intrinsic.Control.EndIf
+	gui.Form.txtFile.Text(v.Local.sFilePath)
+
+F.Intrinsic.Control.Catch
+    F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+    F.Intrinsic.UI.Msgbox(V.Local.sError)
+       F.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdBrowse_Click.End
+
+Program.Sub.Form_UnLoad.Start
+f.Intrinsic.Control.CallSub("Unload")
+Program.Sub.Form_UnLoad.End
